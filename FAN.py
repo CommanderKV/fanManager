@@ -2,10 +2,15 @@ import os
 import time as timeos
 import pickle
 from datetime import date, time, datetime
+import RPi.GPIO as io
+
+io.setmode(io.BCM)
 
 class Fan:
     def __init__(self, pin, name):
         self.pin = int(pin)
+        self.setupPin()
+
         self.name = name
 
         self.state = False
@@ -19,6 +24,10 @@ class Fan:
         self.userToggleOn = False
         self.userToggleOff = False
 
+
+    def setupPin(self):
+        io.setup(self.pin, io.OUT)
+    
 
     def save(self, settings, new=True):
         try:
@@ -50,7 +59,6 @@ class Fan:
     
     def update(self):
         path = os.path.join(os.getcwd(), str(self.name)+".pkl")
-        os.remove(path)
         while os.path.exists(path) is True:
             os.remove(path)
         
@@ -88,11 +96,15 @@ class Fan:
                         # If current time is greater than the turn 
                         # off time and user has not toggled on their fan then
                         if currentTime > self.turnOffTime and self.userToggleOn is False:
-                            # Turn a pin to false or 0 here
-                            print(f"[INFO] Automatically turned off {self.name}'s fan")
-                            self.state = False
-                            self.userToggleOff = False
-                            self.update()
+                            result = self.turnOff()
+                            if result is True:
+                                print(f"[INFO] Automatically turned off {self.name}'s fan")
+                                self.state = False
+                                self.userToggleOff = False
+                                self.update()
+                            else:
+                                print(f"[ERROR] Failed to turn off {self.name}'s fan.\n[ERROR] Pin: {self.pin}, State: {self.state}")
+                                return False
             return True
         
         except:
@@ -114,11 +126,16 @@ class Fan:
                         # If current time is greater than the turn on time and 
                         # user Toggle on is False
                         if currentTime > self.turnOnTime and self.userToggleOff is False:
-                            # Turn a pin to True or 1
-                            print(f"[INFO] Automatically turned on {self.name}'s fan")
-                            self.state = True
-                            self.userToggleOn = False
-                            self.update
+                            result = self.turnOn()
+                            if result is True:
+                                print(f"[INFO] Automatically turned on {self.name}'s fan")
+                                self.state = True
+                                self.userToggleOn = False
+                                self.update()
+                                return True
+                            else:
+                                print(f"[ERROR] Failed to turn on {self.name}'s fan.\n[ERROR] Pin: {self.pin}, State: {self.state}")
+                                return False
             return True
         
         except:
@@ -126,21 +143,29 @@ class Fan:
 
 
     def turnOn(self):
-        # Turn a pin to True or 1
-        # make sure that it did work 
-        # with a try or something
-        self.state = True
-        self.userToggleOn = True
-        return True # Or false depending on if it worked
+        try:
+            io.output(self.pin, 1)
+            self.state = True
+
+        except:
+            self.state = False
+
+        finally:
+            self.userToggleOn = True
+            return self.state # Or false depending on if it worked
 
 
     def turnOff(self):
-        # Turn a pin to False or 0
-        # make sure that it did work
-        # with a try or something
-        self.state = False
-        self.userToggleOff = True
-        return True # Or false depending on if it worked
+        try:
+            io.output(self.pin, 0)
+            self.state = True
+
+        except:
+            self.state = False
+            
+        finally:
+            self.userToggleOn = True
+            return not self.state # Or false depending on if it worked
 
 
     def isFanOn(self):
