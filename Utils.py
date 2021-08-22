@@ -98,6 +98,7 @@ def loadFans():
             fan = pickle.load(open(os.path.join(os.getcwd(), name.replace("\n", "")+".pkl"), "rb"))
             fan.userToggleOn = False
             fan.userToggleOff = False
+            fan.setupPin()
             fans.append(fan)
         
         except Exception as error:
